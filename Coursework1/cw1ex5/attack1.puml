@@ -1,0 +1,10 @@
+@startuml Attack1
+
+Alice -> Eve: Alice, <i>R<sub>A</sub></i>
+Eve -> Bob: "Alice", <i>R<sub>A</sub></i>
+Bob -> Eve: Bob, <i>R<sub>B</sub></i>, E(K, <i>R<sub>A</sub></i>)
+Eve -> Alice: "Bob", <i>R<sub>B</sub></i>, E(K, <i>R<sub>A</sub></i>)
+Alice -> Eve: E(K, <i>R<sub>B</sub></i>)
+Eve -> Bob: E(K, <i>R<sub>B</sub></i>)
+
+@enduml
