@@ -2,7 +2,7 @@
 Exercises from Courseworks of the Course COMP.SEC.220-2023-2024-1-TAU
 
 
-## TODO Coursework 1
+## Coursework 1 - TODO
 
 - [x] Exercise 1
 - [ ] Exercise 2
@@ -14,3 +14,11 @@ Exercises from Courseworks of the Course COMP.SEC.220-2023-2024-1-TAU
 - [x] *Exercise 8*
 - [ ] Exercise 9
 - [ ] Exercise 10
+
+## Coursework 2
+
+- `cw2.ipynb`: Contains the Experimental Evaluation replications from the original paper(an attempt)
+- `range_tree.py`: Contains the implementation of the binary interval tree
+- `mife.py`: Contains the ElGamal and MIFE implementations
+- `utils.py`: Contains multiple functions that help with the implementations
+- `entities`: Contains an abstraction of the Curator
