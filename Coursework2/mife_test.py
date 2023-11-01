@@ -2,7 +2,7 @@ import unittest
 import random
 import numpy as np
 from mife import ElGamal, MIFE
-from util import generate_gp, l1_norm
+from utils import generate_gp, l1_norm
 
 N_BITS = 4
 N_INSTANCES = 3
@@ -65,8 +65,8 @@ class TestMIFE(unittest.TestCase):
 
     def test_enc(self):
         c = self.mife.enc(self.x)
-        self.assertEqual(len(c), self.mife.n)
-        for i in range(self.mife.n):
+        self.assertEqual(len(c), self.mife.N)
+        for i in range(self.mife.N):
             self.assertIsNotNone(c[i])
 
     def test_dec_l1(self):

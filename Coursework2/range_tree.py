@@ -1,12 +1,4 @@
-import numpy as np
-from mife import MIFE
 import time
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import Crypto.Util.number as CUN
-from util import generate_gp
-import concurrent.futures
-from mife import ElGamal
 
 
 class Node:
@@ -67,9 +59,7 @@ class BinaryRangeTree:
     def modify_node_value(self, node, modifier_func):
         t0 = time.perf_counter()
         if node is not None:
-            # Modify the node's value using the provided lambda function
             node.count = modifier_func(node.count)
-            # Recursively modify values of left and right subtrees
             self.modify_node_value(node.left, modifier_func)
             self.modify_node_value(node.right, modifier_func)
         return time.perf_counter() - t0
@@ -82,11 +72,9 @@ class BinaryRangeTree:
         if node is None:
             return
 
-        # Encrypt the node's count using the provided ElGamal instance
         node.elGamal = keys.pop()
         node.count = node.elGamal.enc(node.count)
 
-        # Recursively encrypt the left and right subtrees
         self._encrypt(node.left, keys)
         self._encrypt(node.right, keys)
 
@@ -94,17 +82,37 @@ class BinaryRangeTree:
         return self._query_interval(self.root, interval)
 
     def _query_interval(self, node, interval):
-        # If the node is None, return 0
         if node is None:
             return 0
 
-        # If the interval of the node is contained in the query interval, return the count of the node
         if interval[0] <= node.min and interval[1] >= node.max:
             return node.count if node.elGamal is None else node.elGamal.dec(node.count)
 
-        # If the interval of the node is disjoint with the query interval, return 0
         if interval[0] > node.max or interval[1] < node.min:
             return 0
 
-        # If the interval of the node overlaps with the query interval, recursively call the function
         return self._query_interval(node.left, interval) + self._query_interval(node.right, interval)
+    
+    def get_interval(self, interval=None, count=True):
+        if interval is None:
+            interval = (self.root.min, self.root.max)
+        return self._get_interval(self.root, interval, count)
+
+    def _get_interval(self, node, interval, count=True):
+        """
+        returns a list of all counts in the tree within the given interval
+        """
+        if node is None:
+            return []
+
+        if interval[0] > node.max or interval[1] < node.min:
+            return []
+
+        results = []
+        if interval[0] <= node.min and interval[1] >= node.max:
+            results.append(node.count if count else node)
+        else:
+            results.extend(self._get_interval(node.left, interval, count))
+            results.extend(self._get_interval(node.right, interval, count))
+
+        return results

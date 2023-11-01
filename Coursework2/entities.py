@@ -1,13 +1,8 @@
 import numpy as np
-from mife import MIFE
 import time
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import Crypto.Util.number as CUN
-from util import generate_gp
-import concurrent.futures
-from mife import ElGamal
+from mife import MIFE
 from range_tree import BinaryRangeTree
+from utils import dec_gamal_additive
     
 
 
@@ -19,9 +14,6 @@ class Curator():
 
         times = {}
 
-        # Generate a G group and a P prime
-        G, P = generate_gp(nbits=nbits) if (G is None or P is None) else (G, P)
-
 
         # Generate and populate the binary range tree
         t0 = time.perf_counter()
@@ -30,13 +22,12 @@ class Curator():
 
         # Generate the keys
         t0 = time.time()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(ElGamal, nbits=nbits, G=G, P=P) for _ in range(2**(N+1)-1)]
-            self.keys = [f.result() for f in futures]
+        self.mife = MIFE(N, nbits, G, P)
         times["generateKeys"] = time.time() - t0
 
         self.N = N
         self.times = times
+        self.G, self.P = G, P
         
     def add_noise(self, epsilon):
         insert_noise = lambda x: x + np.random.laplace(0, 1/epsilon)
@@ -44,7 +35,7 @@ class Curator():
 
     def encrypt(self):
         t0 = time.time()
-        self.T.encrypt(self.keys)
+        self.T.encrypt(self.mife.PKE)
         self.times["encrypt"] = time.time() - t0
 
     
@@ -56,5 +47,11 @@ class Curator():
         else:  
             self.T.insert_data(data)
 
-    def read(self, start, end):
-        return self.T.query_interval((start, end))
+    def read(self, interval, f_key=False):
+        if f_key:
+            nodes = self.T.get_interval(interval, count=False)
+            # func_key = int(np.sum([node.elGamal.sk for node in nodes]))
+            c = np.prod([node.count for node in nodes], axis=0).tolist()
+            return dec_gamal_additive(c, nodes[0].elGamal.sk, self.G, self.P)
+        else:
+            return self.T.query_interval(interval)

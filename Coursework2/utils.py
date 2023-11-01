@@ -1,10 +1,11 @@
 # Multi-Input Functional Encryption for the $|| l_1 ||$ norm
+import numpy as np
 import pickle
+import multiprocessing
+from Crypto.Util import number
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import numpy as np
-from Crypto.Util import number
-from Crypto.PublicKey import DSA
 
 
 
@@ -12,20 +13,10 @@ from Crypto.PublicKey import DSA
 
 
 
-def l1_norm(x):
-    # obtaining key from 
-    # return sum([i%p for i in x]) % p
-    return 5
-
-from Crypto.PublicKey import ElGamal
-
-
-from Crypto.Util import number
-
-import random
-import threading
-from Crypto.Util import number
-import multiprocessing
+def l1_norm(x, P):
+    r = 0
+    [r := r + i%P for i in x]
+    return r%P
 
 
 def find_gp(result_queue, nbits):
@@ -82,7 +73,7 @@ def pollard_rho(n, f, g):
     while d == 1:
         x = f(x) % n
         y = f(g(y)) % n
-        d = np.gcd(abs(x-y), n)
+        d = int(np.gcd(abs(x-y), n))
     return d
 
 
@@ -139,3 +130,20 @@ def plot_tree(tree, title):
                 ax.plot([x1, x2], [y1, y2], color='black', zorder=0, alpha=0.5)
 
     plt.show()
+
+
+def discrete_log(nbits, base, exp, mod):
+    for i in range(2**nbits):
+        if pow(base, i, mod) == exp:
+            return i
+        
+
+def enc_gamal_additive(x, pk, G, P, r=None):
+    r = number.getRandomRange(2, P-2) if r is None else r
+    c1 = pow(G, r, P)
+    c2 = (pow(G, int(x), P) * pow(pk, r, P)) % P
+    return (c1, c2)
+
+def dec_gamal_additive(c, sk, G, P):
+    c1, c2 = c
+    return discrete_log(12, G, pow(c1, -sk, P) * c2 % P, P)
