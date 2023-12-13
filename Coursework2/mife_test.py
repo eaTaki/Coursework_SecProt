@@ -1,78 +1,80 @@
 import unittest
 import random
 import numpy as np
-from mife import ElGamal, MIFE
-from utils import generate_gp, l1_norm
+from mife import ElGamal
+from utils import get_GP, enc_gamal_additive
+from entities import Curator
+
 
 N_BITS = 4
 N_INSTANCES = 3
-G, P = generate_gp(N_BITS)
-
-print(f"p = {P} | g = {G}")
+G, P = get_GP(load_file="Coursework2/gp.txt", nbits=1024)
 
 class TestElGamal(unittest.TestCase):
 
     def test_enc_dec(self):
 
-        elGamal = ElGamal(nbits=16)
-
-        x = int(random.randint(1, P-1))
-        c1, c2 = elGamal.enc(x)
-        x_dec = elGamal.dec((c1, c2))
-
-        self.assertEqual(x, x_dec)
+        elGamal = ElGamal(nbits=1024, G=G, P=P)
+        m = int(random.randint(1, 100))
+        self.assertEqual(m, elGamal.dec(elGamal.enc(m)))
 
     def test_lch(self):
         # Test Linear Congruence Homomorphism (LCH) (pg. 18)
 
-        elGamal1, elGamal2 = ElGamal(g=G, p=P), ElGamal(g=G, p=P)
+        r = random.randint(1, P-1)
+        elGamal1, elGamal2 = ElGamal(G=G, P=P), ElGamal(G=G, P=P)
+        m1, m2 = random.randint(1, 100), random.randint(1, 100)
 
-        x1, x2 = random.randint(1, P-1), random.randint(1, P-1)
+        enc = [elGamal1.enc(m1, r=r), elGamal2.enc(m2, r=r)]
 
-        elGamal3 = ElGamal(g=G, p=P)
-        elGamal3.pk = (elGamal1.pk * elGamal2.pk) % P
+        c1 = enc[0][0]*enc[1][0] % P, enc[0][1]*enc[1][1] % P
+        c2 = enc_gamal_additive((m1 + m2)%P, (elGamal1.pk*elGamal2.pk)%P, G, P, r=r)
 
-        c1 = np.prod([elGamal1.enc(x1), elGamal2.enc(x2)], axis=1)
-        c1 = (c1[0] % P, c1[1] % P)
-        c2 = elGamal3.enc(x1+x2)
-
-        self.assertEqual(c1, c2)
+        self.assertEqual(c1[1], c2[1])
 
     def test_lkh(self):
-        # Test Linear Key Homomorphism (LKH)
+        # Test Linear Key Homomorphism (LKH) (pg. 18)
 
-        elGamal1, elGamal2 = ElGamal(), ElGamal()
+        r = random.randint(1, P-1)
+        elGamal1, elGamal2 = ElGamal(G=G, P=P), ElGamal(G=G, P=P)
 
-        # Encrypt a plaintext using two different public keys
-        plain_text = random.randint(1, P-1)
-        c1, c2 = elGamal1.enc(plain_text)
-        c3, c4 = elGamal2.enc(plain_text)
+        elGamal3 = ElGamal(G=G, P=P, sk=(elGamal1.sk + elGamal2.sk)%P, pk=(elGamal1.pk*elGamal2.pk)%P)
 
-        # Decrypt the ciphertexts using the combined public key
-        decrypted_combined1 = elGamal1.dec(c1, c2)
-        decrypted_combined2 = elGamal2.dec(c3, c4)
+        m = random.randint(1, 100)
 
-        # The decrypted results should be the same
-        self.assertEqual(decrypted_combined1, decrypted_combined2)
+        self.assertEqual(elGamal3.dec(elGamal3.enc(m, r=r)), m)
 
-class TestMIFE(unittest.TestCase):
+
+class TestCurator(unittest.TestCase):
     def setUp(self):
-        self.mife = MIFE(G, P, 3)
-        self.mpk = self.mife.mpk
-        self.msk = self.mife.msk
-        self.x = [1, 2, 3]
-        self.c = self.mife.enc(self.x)
 
-    def test_enc(self):
-        c = self.mife.enc(self.x)
-        self.assertEqual(len(c), self.mife.N)
-        for i in range(self.mife.N):
-            self.assertIsNotNone(c[i])
+        self.N = 5
+        x = np.random.randint(1, 2**self.N+1, 100)
+        self.curator = Curator(self.N, G=G, P=P, x=x)
 
-    def test_dec_l1(self):
-        x_dec = self.mife.dec_l1(self.c)
-        l1 = l1_norm(P, self.x)
-        self.assertEqual(x_dec, l1)
+        self.interval = np.random.randint(1, 2**self.N+1, 2)
+        self.interval.sort()
+
+        self.query = len([i for i in x if self.interval[0] <= i <= self.interval[1]])
+
+    def test_add_noise(self):
+        epsilon = 0.5
+        self.curator.add_noise(epsilon)
+        self.assertTrue(isinstance(self.curator.times["addNoise"], float))
+
+    def test_encrypt(self):
+        self.curator.encrypt()
+        self.assertTrue(isinstance(self.curator.times["encrypt"], float))
+
+    def test_read_without_f_key(self):
+        result = self.curator.read(self.interval)
+        self.assertEqual(result, self.query)
+
+    def test_read_with_f_key(self):
+        result = self.curator.read(self.interval, f_key=True)
+        self.assertEqual(result, self.query)
+        
+
 
 if __name__ == '__main__':
     unittest.main()

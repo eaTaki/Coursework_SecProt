@@ -49,6 +49,23 @@ def generate_gp(nbits=1024, num_processes=4):
 
     return g, p
 
+def get_GP(load_file=None, nbits=1024):
+    if load_file: 
+        load_file = 'gp.txt' if type(load_file) == bool else load_file
+        # loading the generated values
+        with open(load_file, 'r') as f:
+            G = int(f.readline().split('=')[1])
+            P = int(f.readline().split('=')[1])
+    else:
+        G, P = generate_gp(nbits=1024, num_processes=8)
+        print("G =", G)
+        print("P =", P) 
+        # saving the generated values
+        with open('gp.txt', 'w') as f:
+            f.write("G = " + str(G) + "\n")
+            f.write("P = " + str(P) + "\n")
+    return G, P
+
 def generate_keys(G, P, nbits=1024):
     while True:
         x = number.getRandomRange(2, P-2)
@@ -91,11 +108,6 @@ def extended_gcd(a, b):
     else:
         g, x, y = extended_gcd(b % a, a)
         return (g, y - (b // a) * x, x)
-
-def DLP_solve(y):
-    with open('table.pickle', 'rb') as handle:
-        table = pickle.load(handle)
-    return table[y]
 
 
 def plot_tree(tree, title):
@@ -141,9 +153,9 @@ def discrete_log(nbits, base, exp, mod):
 def enc_gamal_additive(x, pk, G, P, r=None):
     r = number.getRandomRange(2, P-2) if r is None else r
     c1 = pow(G, r, P)
-    c2 = (pow(G, int(x), P) * pow(pk, r, P)) % P
+    c2 = (pow(pk, r, P) * pow(G, int(x), P))%P
     return (c1, c2)
 
 def dec_gamal_additive(c, sk, G, P):
     c1, c2 = c
-    return discrete_log(12, G, pow(c1, -sk, P) * c2 % P, P)
+    return discrete_log(15, G, pow(c1, -sk, P) * c2 % P, P)
