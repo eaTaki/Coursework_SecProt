@@ -1,15 +1,12 @@
 # Multi-Input Functional Encryption for the $|| l_1 ||$ norm
 import numpy as np
-import pickle
 import multiprocessing
 from Crypto.Util import number
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-
-
-
-
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives import serialization
 
 
 
@@ -66,7 +63,7 @@ def get_GP(load_file=None, nbits=1024):
             f.write("P = " + str(P) + "\n")
     return G, P
 
-def generate_keys(G, P, nbits=1024):
+def generate_keys(G, P):
     while True:
         x = number.getRandomRange(2, P-2)
         y = pow(G, x, P)
@@ -76,10 +73,22 @@ def generate_keys(G, P, nbits=1024):
     pk = pow(G, sk, P)
     return sk, pk
 
-# def generate_keys(G, P, nbits=1024):
-#     sk = DSA.generate(nbits, domain=(G, P, 2))
-#     pk = sk.publickey()
-#     return sk, pk
+def generate_keys_(G, P):
+    parameters = dh.DHParameterNumbers(P, G).parameters()
+
+    # Generate private key
+    private_key = parameters.generate_private_key()
+
+    # Convert the private key to an integer
+    sk = private_key.private_numbers().x
+
+    # Convert the public key to an integer
+    pk = private_key.public_key().public_numbers().y
+
+
+
+    return sk, pk
+
 
 
 
@@ -110,7 +119,7 @@ def extended_gcd(a, b):
         return (g, y - (b // a) * x, x)
 
 
-def plot_tree(tree, title):
+def plot_tree(tree, title, fontsize=4):
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.set_title(title)
     max_depth = tree.root.max.bit_length()
@@ -127,8 +136,8 @@ def plot_tree(tree, title):
             y = max_depth - 2*level + 1
             node_positions[node] = (x, y)
             ax.add_patch(patches.Circle((x, y), radius=0.8, facecolor='white', edgecolor='black'))
-            ax.text(x, y, str(node.print()), ha='center', va='center', fontsize=4)
-            ax.text(x, y + 1, f"[{node.min}-{node.max}]", ha='center', va='center', fontsize=4)
+            ax.text(x, y, str(node.print()), ha='center', va='center', fontsize=fontsize)
+            ax.text(x, y + 1, f"[{node.min}-{node.max}]", ha='center', va='center', fontsize=fontsize)
 
             if node.left is not None:
                 queue.append((node.left, level + 1))

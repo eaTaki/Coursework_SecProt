@@ -1,7 +1,7 @@
 import unittest
 import random
 import numpy as np
-from mife import ElGamal
+from elGamal import ElGamal
 from utils import get_GP, enc_gamal_additive
 from entities import Curator
 
